@@ -86,7 +86,7 @@ func (l *Loader) LoadWAV(id AudioID) Audio {
 				panic(fmt.Sprintf("closing %q wav reader: %v", wavInfo.Path, err))
 			}
 		}()
-		stream, err := wav.Decode(l.audioContext, r)
+		stream, err := wav.DecodeWithSampleRate(l.audioContext.SampleRate(), r)
 		if err != nil {
 			panic(fmt.Sprintf("decode %q wav: %v", wavInfo.Path, err))
 		}
@@ -121,7 +121,7 @@ func (l *Loader) LoadOGG(id AudioID) Audio {
 			}
 		}()
 		var err error
-		oggStream, err := vorbis.Decode(l.audioContext, r)
+		oggStream, err := vorbis.DecodeWithSampleRate(l.audioContext.SampleRate(), r)
 		if err != nil {
 			panic(fmt.Sprintf("decode %q ogg: %v", oggInfo.Path, err))
 		}
