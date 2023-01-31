@@ -129,7 +129,7 @@ You start by creating a loader with [resource.NewLoader()](https://pkg.go.dev/gi
 
 The loader acts as a cached resource access point. Resources are keyed by their ID. The ID is a simple integer. All metadata is associated with that ID too. It's recommended to make the core resources iota-style constants.
 
-If you want to preload a resource, do a respective `Load` call either during a game launch or during the loading screen.
+If you want to preload a resource, do a respective `Load` (e.g. [LoadImage](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Loader.LoadImage), [LoadAudio](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Loader.LoadAudio)) call either during a game launch or during the loading screen.
 
 Most types in a package can be described by these categories:
 
