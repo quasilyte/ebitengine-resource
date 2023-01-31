@@ -10,6 +10,7 @@ A resource manager (loader) for [Ebitengine](https://github.com/hajimehoshi/ebit
 **Key features:**
 
 * Resource caching (only the first load decodes the resource)
+* No extra dependencies (apart from the [Ebitengine](https://github.com/hajimehoshi/ebiten) of course)
 * Easy to use and opinionated
 * iota-friendly typed constants API
 * Int-based keys are also efficient, so the lookups are very fast
