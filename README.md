@@ -149,7 +149,7 @@ The info objects should be bound before the resource is accessed via `Load` meth
 Supported resource kinds:
 
 * [Audio](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Audio) (`*Audio.Player` with decoded stream)
-* [Font](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Font) (`font.Face` with relevant properties like font size and line spacing)
+* [Font](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Font) ([font.Face](https://pkg.go.dev/golang.org/x/image/font#Face) with relevant properties like font size and line spacing)
 * [Image](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Image) (`*ebiten.Image` created from a texture)
 * [Shader](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Shader) (a compiled `*ebiten.Shader`)
 * [Raw](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Raw) (stored as `[]byte`)
