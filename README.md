@@ -127,6 +127,8 @@ How to use this library properly?
 
 You start by creating a loader with [resource.NewLoader()](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#NewLoader). It should happen after you acquired an `*audio.Context` from Ebitengine. It's not recommended to make loader global, pass it as an explicit dependency everywhere you need to access the game resources.
 
+Then you bind the resources using typed registries. For instance, binding image resources is done via `loader.ImageRegistry` field (use `Set` or `Assign` methods).
+
 The loader acts as a cached resource access point. Resources are keyed by their ID. The ID is a simple integer. All metadata is associated with that ID too. It's recommended to make the core resources iota-style constants.
 
 If you want to preload a resource, do a respective `Load` (e.g. [LoadImage](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Loader.LoadImage), [LoadAudio](https://pkg.go.dev/github.com/quasilyte/ebitengine-resource#Loader.LoadAudio)) call either during a game launch or during the loading screen.
