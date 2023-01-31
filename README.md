@@ -16,7 +16,7 @@ A resource manager (loader) for [Ebitengine](https://github.com/hajimehoshi/ebit
 
 **Dependencies:**
 
-* Ebitengine itself
+* [Ebitengine](https://github.com/hajimehoshi/ebiten) itself
 * [golang.org/x/image](https://pkg.go.dev/golang.org/x/image) for `golang.org/x/image/font`
 
 Some games that were built with this library:
