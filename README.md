@@ -120,3 +120,21 @@ var resdata = map[string][]byte{
 	}, "")),
 }
 ```
+
+### Introduction
+
+How to use this library properly?
+
+You start by creating a loader with `resource.NewLoader()`. It should happen after you acquired an `*audio.Context` from Ebitengine. It's not recommended to make loader global, pass it as an explicit dependency everywhere you need to access the game resources.
+
+The loader acts as a cached resource access point. Resources are keyed by their ID. The ID is a simple integer. All metadata is associated with that ID too. It's recommended to make the core resources iota-style constants.
+
+If you want to preload a resource, do a respective `Load` call either during a game launch or during the loading screen.
+
+Most types in a package can be described by these categories:
+
+1. ID types that belong to specific kind of resource (e.g. `ImageID`, `AudioID`)
+2. Info objects that describe the resource (e.g. `ImageInfo`, `AudioInfo`)
+3. The actual resource objects (e.g. `Image`, `Audio`)
+
+The info objects should be bound before the resource is accessed via `Load` method. It's possible to bind extra resources during the run-time.
