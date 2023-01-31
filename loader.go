@@ -22,11 +22,11 @@ type Loader struct {
 	// The returned resource will be closed after it will be loaded.
 	OpenAssetFunc func(path string) io.ReadCloser
 
-	ImageRegistry  ImageRegistry
-	AudioRegistry  AudioRegistry
-	FontRegistry   FontRegistry
-	ShaderRegistry ShaderRegistry
-	RawRegistry    RawRegistry
+	ImageRegistry  registry[ImageID, ImageInfo]
+	AudioRegistry  registry[AudioID, AudioInfo]
+	FontRegistry   registry[FontID, FontInfo]
+	ShaderRegistry registry[ShaderID, ShaderInfo]
+	RawRegistry    registry[RawID, RawInfo]
 
 	audioContext *audio.Context
 

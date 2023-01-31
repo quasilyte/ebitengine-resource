@@ -1,27 +1,13 @@
 package resource
 
-type Raw struct {
-	ID RawID
-
-	Data []byte
-}
+type RawID int
 
 type RawInfo struct {
 	Path string
 }
 
-type RawID int
+type Raw struct {
+	ID RawID
 
-type RawRegistry struct {
-	mapping map[RawID]RawInfo
-}
-
-func (r *RawRegistry) Set(id RawID, info RawInfo) {
-	r.mapping[id] = info
-}
-
-func (r *RawRegistry) Assign(m map[RawID]RawInfo) {
-	for k, v := range m {
-		r.Set(k, v)
-	}
+	Data []byte
 }

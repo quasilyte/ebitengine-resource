@@ -4,12 +4,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio"
 )
 
-type Audio struct {
-	ID     AudioID
-	Player *audio.Player
-	Group  uint
-	Volume float64
-}
+type AudioID int
 
 type AudioInfo struct {
 	Path string
@@ -28,18 +23,9 @@ type AudioInfo struct {
 	Volume float64
 }
 
-type AudioID int
-
-type AudioRegistry struct {
-	mapping map[AudioID]AudioInfo
-}
-
-func (r *AudioRegistry) Set(id AudioID, info AudioInfo) {
-	r.mapping[id] = info
-}
-
-func (r *AudioRegistry) Assign(m map[AudioID]AudioInfo) {
-	for k, v := range m {
-		r.Set(k, v)
-	}
+type Audio struct {
+	ID     AudioID
+	Player *audio.Player
+	Group  uint
+	Volume float64
 }

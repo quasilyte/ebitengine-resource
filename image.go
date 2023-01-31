@@ -4,13 +4,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-type Image struct {
-	ID   ImageID
-	Data *ebiten.Image
-
-	DefaultFrameWidth  float64
-	DefaultFrameHeight float64
-}
+type ImageID int
 
 type ImageInfo struct {
 	Path string
@@ -19,18 +13,10 @@ type ImageInfo struct {
 	FrameHeight float64
 }
 
-type ImageID int
+type Image struct {
+	ID   ImageID
+	Data *ebiten.Image
 
-type ImageRegistry struct {
-	mapping map[ImageID]ImageInfo
-}
-
-func (r *ImageRegistry) Set(id ImageID, info ImageInfo) {
-	r.mapping[id] = info
-}
-
-func (r *ImageRegistry) Assign(m map[ImageID]ImageInfo) {
-	for k, v := range m {
-		r.Set(k, v)
-	}
+	DefaultFrameWidth  float64
+	DefaultFrameHeight float64
 }
