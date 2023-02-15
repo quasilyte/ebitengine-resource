@@ -73,6 +73,11 @@ func (l *Loader) LoadAudio(id AudioID) Audio {
 	return l.LoadWAV(id)
 }
 
+// GetFontInfo extracts the audio info associated with a given key.
+func (l *Loader) GetAudioInfo(id AudioID) AudioInfo {
+	return l.AudioRegistry.mapping[id]
+}
+
 // LoadWAV returns a Audio resource associated with a given key.
 // Only a first call for this id will lead to resource decoding,
 // all next calls return the cached result.
@@ -187,6 +192,11 @@ func (l *Loader) LoadFont(id FontID) Font {
 	return f
 }
 
+// GetFontInfo extracts the font info associated with a given key.
+func (l *Loader) GetFontInfo(id FontID) FontInfo {
+	return l.FontRegistry.mapping[id]
+}
+
 // LoadImage returns an Image resource associated with a given key.
 // Only a first call for this id will lead to resource decoding,
 // all next calls return the cached result.
@@ -217,6 +227,11 @@ func (l *Loader) LoadImage(id ImageID) Image {
 		l.images[id] = img
 	}
 	return img
+}
+
+// GetImageInfo extracts the image info associated with a given key.
+func (l *Loader) GetImageInfo(id ImageID) ImageInfo {
+	return l.ImageRegistry.mapping[id]
 }
 
 // LoadShader returns a Shader resource associated with a given key.
@@ -279,6 +294,11 @@ func (l *Loader) LoadRaw(id RawID) Raw {
 		l.raws[id] = raw
 	}
 	return raw
+}
+
+// GetRawInfo extracts the raw info associated with a given key.
+func (l *Loader) GetRawInfo(id RawID) RawInfo {
+	return l.RawRegistry.mapping[id]
 }
 
 func (l *Loader) getAudioInfo(id AudioID) AudioInfo {
