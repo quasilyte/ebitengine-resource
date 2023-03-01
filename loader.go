@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"io"
@@ -130,7 +131,11 @@ func (l *Loader) LoadOGG(id AudioID) Audio {
 		if err != nil {
 			panic(fmt.Sprintf("decode %q ogg: %v", oggInfo.Path, err))
 		}
-		loopedStream := audio.NewInfiniteLoop(oggStream, oggStream.Length())
+		oggData, err := io.ReadAll(oggStream)
+		if err != nil {
+			panic(fmt.Sprintf("read %q wav: %v", oggInfo.Path, err))
+		}
+		loopedStream := audio.NewInfiniteLoop(bytes.NewReader(oggData), oggStream.Length())
 		player, err := l.audioContext.NewPlayer(loopedStream)
 		if err != nil {
 			panic(err.Error())
