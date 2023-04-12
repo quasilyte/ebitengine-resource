@@ -1,7 +1,6 @@
 package resource
 
 import (
-	"bytes"
 	"fmt"
 	"image"
 	"io"
@@ -92,12 +91,12 @@ func (l *Loader) LoadWAV(id AudioID) Audio {
 				panic(fmt.Sprintf("closing %q wav reader: %v", wavInfo.Path, err))
 			}
 		}()
-		stream, err := wav.DecodeWithSampleRate(l.audioContext.SampleRate(), r)
+		stream, err := wav.DecodeWithoutResampling(r)
 		if err != nil {
 			panic(fmt.Sprintf("decode %q wav: %v", wavInfo.Path, err))
 		}
-		wavData, err := io.ReadAll(stream)
-		if err != nil {
+		wavData := make([]byte, stream.Length())
+		if _, err := io.ReadFull(stream, wavData); err != nil {
 			panic(fmt.Sprintf("read %q wav: %v", wavInfo.Path, err))
 		}
 		player := l.audioContext.NewPlayerFromBytes(wavData)
@@ -121,21 +120,23 @@ func (l *Loader) LoadOGG(id AudioID) Audio {
 	if !ok {
 		oggInfo := l.getAudioInfo(id)
 		r := l.OpenAssetFunc(oggInfo.Path)
-		defer func() {
-			if err := r.Close(); err != nil {
-				panic(fmt.Sprintf("closing %q ogg reader: %v", oggInfo.Path, err))
-			}
-		}()
 		var err error
-		oggStream, err := vorbis.DecodeWithSampleRate(l.audioContext.SampleRate(), r)
+		oggStream, err := vorbis.DecodeWithoutResampling(r)
 		if err != nil {
 			panic(fmt.Sprintf("decode %q ogg: %v", oggInfo.Path, err))
 		}
-		oggData, err := io.ReadAll(oggStream)
-		if err != nil {
-			panic(fmt.Sprintf("read %q wav: %v", oggInfo.Path, err))
-		}
-		loopedStream := audio.NewInfiniteLoop(bytes.NewReader(oggData), oggStream.Length())
+		// This approach requires too much memory.
+		// The stream reader approach will spam allocations, but
+		// at least we won't consume that much memory.
+		// Note: we're not closing the "r" above because the ogg stream
+		// needs it to be kept open.
+		//
+		//      oggData := make([]byte, oggStream.Length())
+		//      if _, err := io.ReadFull(oggStream, oggData); err != nil {
+		//      	panic(fmt.Sprintf("read %q wav: %v", oggInfo.Path, err))
+		//      }
+		//      loopedStream := audio.NewInfiniteLoop(bytes.NewReader(oggData), oggStream.Length())
+		loopedStream := audio.NewInfiniteLoop(oggStream, oggStream.Length())
 		player, err := l.audioContext.NewPlayer(loopedStream)
 		if err != nil {
 			panic(err.Error())
