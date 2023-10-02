@@ -22,6 +22,7 @@ A resource manager (loader) for [Ebitengine](https://github.com/hajimehoshi/ebit
 Some games that were built with this library:
 
 * [Roboden](https://quasilyte.itch.io/roboden)
+* [Cavebots](https://quasilyte.itch.io/cavebots)
 * [Assemblox](https://quasilyte.itch.io/assemblox)
 * [Decipherism](https://quasilyte.itch.io/decipherism)
 * [Retrowave City](https://quasilyte.itch.io/retrowave-city)
