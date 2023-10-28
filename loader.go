@@ -95,18 +95,24 @@ func (l *Loader) LoadWAV(id AudioID) Audio {
 		if err != nil {
 			panic(fmt.Sprintf("decode %q wav: %v", wavInfo.Path, err))
 		}
-		wavData := make([]byte, stream.Length())
-		if _, err := io.ReadFull(stream, wavData); err != nil {
-			panic(fmt.Sprintf("read %q wav: %v", wavInfo.Path, err))
+		var player *audio.Player
+		if wavInfo.StreamDecorator == nil {
+			// Good, can read it into the memory.
+			wavData := make([]byte, stream.Length())
+			if _, err := io.ReadFull(stream, wavData); err != nil {
+				panic(fmt.Sprintf("read %q wav: %v", wavInfo.Path, err))
+			}
+			player = l.audioContext.NewPlayerFromBytes(wavData)
+		} else {
+			// This is an explicit way to tell "don't read it into the memory".
+			// Also, some streams can have external dependencies to affect the
+			// sound, so we can't rely on the bytes being the same every time.
+			player, err = l.audioContext.NewPlayer(wavInfo.StreamDecorator(stream))
+			if err != nil {
+				panic(err.Error())
+			}
 		}
-		player := l.audioContext.NewPlayerFromBytes(wavData)
-		volume := (wavInfo.Volume / 2) + 0.5
-		a = Audio{
-			ID:     id,
-			Player: player,
-			Volume: volume,
-			Group:  wavInfo.Group,
-		}
+		a = l.createAudioObject(player, id, wavInfo)
 		l.wavs[id] = a
 	}
 	return a
@@ -125,29 +131,15 @@ func (l *Loader) LoadOGG(id AudioID) Audio {
 		if err != nil {
 			panic(fmt.Sprintf("decode %q ogg: %v", oggInfo.Path, err))
 		}
-		// This approach requires too much memory.
-		// The stream reader approach will spam allocations, but
-		// at least we won't consume that much memory.
-		// Note: we're not closing the "r" above because the ogg stream
-		// needs it to be kept open.
-		//
-		//      oggData := make([]byte, oggStream.Length())
-		//      if _, err := io.ReadFull(oggStream, oggData); err != nil {
-		//      	panic(fmt.Sprintf("read %q wav: %v", oggInfo.Path, err))
-		//      }
-		//      loopedStream := audio.NewInfiniteLoop(bytes.NewReader(oggData), oggStream.Length())
-		loopedStream := audio.NewInfiniteLoop(oggStream, oggStream.Length())
-		player, err := l.audioContext.NewPlayer(loopedStream)
+		var stream io.ReadSeeker = oggStream
+		if oggInfo.StreamDecorator != nil {
+			stream = oggInfo.StreamDecorator(stream)
+		}
+		player, err := l.audioContext.NewPlayer(stream)
 		if err != nil {
 			panic(err.Error())
 		}
-		volume := (oggInfo.Volume / 2) + 0.5
-		a = Audio{
-			ID:     id,
-			Player: player,
-			Volume: volume,
-			Group:  oggInfo.Group,
-		}
+		a = l.createAudioObject(player, id, oggInfo)
 		l.oggs[id] = a
 	}
 	return a
@@ -313,4 +305,14 @@ func (l *Loader) getAudioInfo(id AudioID) AudioInfo {
 		panic(fmt.Sprintf("unregistered audio with id=%d", id))
 	}
 	return info
+}
+
+func (l *Loader) createAudioObject(p *audio.Player, id AudioID, info AudioInfo) Audio {
+	volume := (info.Volume / 2) + 0.5
+	return Audio{
+		ID:     id,
+		Player: p,
+		Volume: volume,
+		Group:  info.Group,
+	}
 }
