@@ -1,6 +1,8 @@
 package resource
 
 import (
+	"io"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"golang.org/x/image/font"
@@ -26,6 +28,30 @@ type AudioInfo struct {
 	// This setting accepts values in [-1, 1] range, where -1 mutes the sound
 	// while 1 makes it as loud as possible.
 	Volume float64
+
+	// StreamDecorator is a way to wrap resource stream into another stream
+	// before the associated audio player is created.
+	//
+	// An example usage for this is to wrap OGG stream into an InfiniteLoop stream.
+	// You can use LoopOGG function just for that.
+	// Another example could include a preprocessing stream that would
+	// alter the original resource sound.
+	//
+	// Previously, OGG streams were looped by default.
+	// This option allows a finer control over what to do with a stream.
+	//
+	// A nil decorator will use the original stream as is.
+	//
+	// This function is called exactly once per resource upon its first loading.
+	//
+	// Note: you can use decorators for any type of audio resource (WAV included),
+	// although it's not recommended to do so. By default, this library reads the
+	// entire WAV into memory and creates the raw byte stream player from that.
+	// Unless you really want to do it, leave this field nil for WAVs.
+	// If you want to reduce the application memory footprint, it can be
+	// beneficial to add a NopDecorator decorator that would return the input stream as is.
+	// This will make WAV more expensive to play in terms of CPU clocks.
+	StreamDecorator func(stream io.ReadSeeker) io.ReadSeeker
 }
 
 type Audio struct {
