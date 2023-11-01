@@ -22,6 +22,33 @@ type Loader struct {
 	// The returned resource will be closed after it will be loaded.
 	OpenAssetFunc func(path string) io.ReadCloser
 
+	// CustomAudioLoader allows LoadAudio to load audio formats that are not supported by default.
+	// If it's nil, LoadAudio() will support only ".ogg" and ".wav" formats.
+	//
+	// CustomAudioLoader should load the audio resource in a form that is suitable for
+	// the Ebitengine audio.NewPlayer() argument.
+	// Note: the input reader will be closed as soon as resource loading is finished.
+	// If your resource needs it to stay valid, create its copy.
+	//
+	// This function should return nil if it can't handle a given resource.
+	//
+	// It's called exactly once per every unique AudioID being loaded.
+	// Setting this field back to nil after all custom audio resources are loaded
+	// will still keep loaded resources reachable via LoadAudio(AudioID).
+	// If your game uses a simple preload-everything scheme, you might want to
+	// set this field to nil after you're done with preloading.
+	//
+	// Keep in mind that you have to use LoadAudio instead of LoadOGG or LoadWAV to
+	// fetch the custom resources.
+	//
+	// An example of this function is XM (or MP3) loading routine.
+	// It would check the filename for ".xm" suffix, read the data from r and
+	// produce an XM stream out of it.
+	//
+	// You can't use this function to override the way OGG or WAV is being loaded
+	// as this function is called after the default loaders and it's by design.
+	CustomAudioLoader func(r io.Reader, info AudioInfo) io.ReadSeeker
+
 	ImageRegistry  registry[ImageID, ImageInfo]
 	AudioRegistry  registry[AudioID, AudioInfo]
 	FontRegistry   registry[FontID, FontInfo]
@@ -30,12 +57,13 @@ type Loader struct {
 
 	audioContext *audio.Context
 
-	images  map[ImageID]Image
-	shaders map[ShaderID]Shader
-	wavs    map[AudioID]Audio
-	oggs    map[AudioID]Audio
-	fonts   map[FontID]Font
-	raws    map[RawID]Raw
+	images      map[ImageID]Image
+	shaders     map[ShaderID]Shader
+	wavs        map[AudioID]Audio
+	oggs        map[AudioID]Audio
+	customAudio map[AudioID]Audio
+	fonts       map[FontID]Font
+	raws        map[RawID]Raw
 }
 
 // NewLoader creates a new resources loader that serves as both
@@ -46,12 +74,13 @@ type Loader struct {
 // be created without an initialized Ebitengine audio context.
 func NewLoader(audioContext *audio.Context) *Loader {
 	l := &Loader{
-		images:  make(map[ImageID]Image),
-		shaders: make(map[ShaderID]Shader),
-		wavs:    make(map[AudioID]Audio),
-		oggs:    make(map[AudioID]Audio),
-		fonts:   make(map[FontID]Font),
-		raws:    make(map[RawID]Raw),
+		images:      make(map[ImageID]Image),
+		shaders:     make(map[ShaderID]Shader),
+		wavs:        make(map[AudioID]Audio),
+		oggs:        make(map[AudioID]Audio),
+		customAudio: make(map[AudioID]Audio),
+		fonts:       make(map[FontID]Font),
+		raws:        make(map[RawID]Raw),
 	}
 	l.audioContext = audioContext
 	l.AudioRegistry.mapping = make(map[AudioID]AudioInfo)
@@ -62,15 +91,28 @@ func NewLoader(audioContext *audio.Context) *Loader {
 	return l
 }
 
-// LoadAudio is a helper method that will use an appripriate
+// LoadAudio is a helper method that will use an appropriate
 // Load method depending on the filename extension.
+//
 // For example, it will use LoadOGG for ".ogg" files.
 func (l *Loader) LoadAudio(id AudioID) Audio {
 	audioInfo := l.getAudioInfo(id)
 	if strings.HasSuffix(audioInfo.Path, ".ogg") {
 		return l.LoadOGG(id)
 	}
-	return l.LoadWAV(id)
+	if strings.HasSuffix(audioInfo.Path, ".wav") {
+		return l.LoadWAV(id)
+	}
+	if len(l.customAudio) != 0 || l.CustomAudioLoader != nil {
+		// Even if CustomAudioLoader is nil at this point, we might still have
+		// cached custom audio resources.
+		// Let them a chance to be fetched.
+		a, ok := l.loadCustomAudio(id, audioInfo)
+		if ok {
+			return a
+		}
+	}
+	panic(fmt.Sprintf("load %q audio: unrecognized format", audioInfo.Path))
 }
 
 // GetFontInfo extracts the audio info associated with a given key.
@@ -78,7 +120,7 @@ func (l *Loader) GetAudioInfo(id AudioID) AudioInfo {
 	return l.AudioRegistry.mapping[id]
 }
 
-// LoadWAV returns a Audio resource associated with a given key.
+// LoadWAV returns an Audio resource associated with a given key.
 // Only a first call for this id will lead to resource decoding,
 // all next calls return the cached result.
 func (l *Loader) LoadWAV(id AudioID) Audio {
@@ -118,24 +160,21 @@ func (l *Loader) LoadWAV(id AudioID) Audio {
 	return a
 }
 
-// LoadOGG returns a Audio resource associated with a given key.
+// LoadOGG returns an Audio resource associated with a given key.
 // Only a first call for this id will lead to resource decoding,
 // all next calls return the cached result.
 func (l *Loader) LoadOGG(id AudioID) Audio {
 	a, ok := l.oggs[id]
 	if !ok {
 		oggInfo := l.getAudioInfo(id)
+		// Do not close this reader as it would break the stream with "file already closed".
 		r := l.OpenAssetFunc(oggInfo.Path)
 		var err error
 		oggStream, err := vorbis.DecodeWithoutResampling(r)
 		if err != nil {
 			panic(fmt.Sprintf("decode %q ogg: %v", oggInfo.Path, err))
 		}
-		var stream io.ReadSeeker = oggStream
-		if oggInfo.StreamDecorator != nil {
-			stream = oggInfo.StreamDecorator(stream)
-		}
-		player, err := l.audioContext.NewPlayer(stream)
+		player, err := l.audioContext.NewPlayer(l.maybeWrapAudioStream(oggStream, oggInfo))
 		if err != nil {
 			panic(err.Error())
 		}
@@ -143,6 +182,33 @@ func (l *Loader) LoadOGG(id AudioID) Audio {
 		l.oggs[id] = a
 	}
 	return a
+}
+
+func (l *Loader) loadCustomAudio(id AudioID, info AudioInfo) (Audio, bool) {
+	a, ok := l.customAudio[id]
+	if !ok {
+		if l.CustomAudioLoader == nil {
+			// Can't load a new custom audio resource without this function.
+			return a, false
+		}
+		r := l.OpenAssetFunc(info.Path)
+		defer func() {
+			if err := r.Close(); err != nil {
+				panic(fmt.Sprintf("closing %q custom audio reader: %v", info.Path, err))
+			}
+		}()
+		stream := l.CustomAudioLoader(r, info)
+		if stream == nil {
+			return a, false
+		}
+		player, err := l.audioContext.NewPlayer(l.maybeWrapAudioStream(stream, info))
+		if err != nil {
+			panic(err.Error())
+		}
+		a = l.createAudioObject(player, id, info)
+		l.customAudio[id] = a
+	}
+	return a, true
 }
 
 // LoadFont returns a Font resource associated with a given key.
@@ -315,4 +381,11 @@ func (l *Loader) createAudioObject(p *audio.Player, id AudioID, info AudioInfo) 
 		Volume: volume,
 		Group:  info.Group,
 	}
+}
+
+func (l *Loader) maybeWrapAudioStream(r io.ReadSeeker, info AudioInfo) io.ReadSeeker {
+	if info.StreamDecorator != nil {
+		return info.StreamDecorator(r)
+	}
+	return r
 }
