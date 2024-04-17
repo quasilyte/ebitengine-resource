@@ -95,8 +95,8 @@ type ImageInfo struct {
 	// A path that will be used to read the resource data.
 	Path string
 
-	FrameWidth  float64
-	FrameHeight float64
+	FrameWidth  int
+	FrameHeight int
 }
 
 type Image struct {
@@ -106,8 +106,8 @@ type Image struct {
 	// An ebiten Image object initialized from the resource bytes.
 	Data *ebiten.Image
 
-	DefaultFrameWidth  float64
-	DefaultFrameHeight float64
+	DefaultFrameWidth  int
+	DefaultFrameHeight int
 }
 
 // RawID is a typed key for Raw resources.
