@@ -57,13 +57,11 @@ type Loader struct {
 
 	audioContext *audio.Context
 
-	images      map[ImageID]Image
-	shaders     map[ShaderID]Shader
-	wavs        map[AudioID]Audio
-	oggs        map[AudioID]Audio
-	customAudio map[AudioID]Audio
-	fonts       map[FontID]Font
-	raws        map[RawID]Raw
+	images  map[ImageID]Image
+	shaders map[ShaderID]Shader
+	audio   map[AudioID]Audio
+	fonts   map[FontID]Font
+	raws    map[RawID]Raw
 }
 
 // NewLoader creates a new resources loader that serves as both
@@ -74,13 +72,11 @@ type Loader struct {
 // be created without an initialized Ebitengine audio context.
 func NewLoader(audioContext *audio.Context) *Loader {
 	l := &Loader{
-		images:      make(map[ImageID]Image),
-		shaders:     make(map[ShaderID]Shader),
-		wavs:        make(map[AudioID]Audio),
-		oggs:        make(map[AudioID]Audio),
-		customAudio: make(map[AudioID]Audio),
-		fonts:       make(map[FontID]Font),
-		raws:        make(map[RawID]Raw),
+		images:  make(map[ImageID]Image),
+		shaders: make(map[ShaderID]Shader),
+		audio:   make(map[AudioID]Audio),
+		fonts:   make(map[FontID]Font),
+		raws:    make(map[RawID]Raw),
 	}
 	l.audioContext = audioContext
 	l.AudioRegistry.mapping = make(map[AudioID]AudioInfo)
@@ -96,6 +92,15 @@ func NewLoader(audioContext *audio.Context) *Loader {
 //
 // For example, it will use LoadOGG for ".ogg" files.
 func (l *Loader) LoadAudio(id AudioID) Audio {
+	{
+		// A fast path for already loaded resource.
+		// No need to distinguish between them.
+		a, ok := l.audio[id]
+		if ok {
+			return a
+		}
+	}
+
 	audioInfo := l.getAudioInfo(id)
 	if strings.HasSuffix(audioInfo.Path, ".ogg") {
 		return l.LoadOGG(id)
@@ -103,15 +108,13 @@ func (l *Loader) LoadAudio(id AudioID) Audio {
 	if strings.HasSuffix(audioInfo.Path, ".wav") {
 		return l.LoadWAV(id)
 	}
-	if len(l.customAudio) != 0 || l.CustomAudioLoader != nil {
-		// Even if CustomAudioLoader is nil at this point, we might still have
-		// cached custom audio resources.
-		// Let them a chance to be fetched.
+	if l.CustomAudioLoader != nil {
 		a, ok := l.loadCustomAudio(id, audioInfo)
 		if ok {
 			return a
 		}
 	}
+
 	panic(fmt.Sprintf("load %q audio: unrecognized format", audioInfo.Path))
 }
 
@@ -124,7 +127,7 @@ func (l *Loader) GetAudioInfo(id AudioID) AudioInfo {
 // Only a first call for this id will lead to resource decoding,
 // all next calls return the cached result.
 func (l *Loader) LoadWAV(id AudioID) Audio {
-	a, ok := l.wavs[id]
+	a, ok := l.audio[id]
 	if !ok {
 		wavInfo := l.getAudioInfo(id)
 		r := l.OpenAssetFunc(wavInfo.Path)
@@ -155,7 +158,7 @@ func (l *Loader) LoadWAV(id AudioID) Audio {
 			}
 		}
 		a = l.createAudioObject(player, id, wavInfo)
-		l.wavs[id] = a
+		l.audio[id] = a
 	}
 	return a
 }
@@ -164,7 +167,7 @@ func (l *Loader) LoadWAV(id AudioID) Audio {
 // Only a first call for this id will lead to resource decoding,
 // all next calls return the cached result.
 func (l *Loader) LoadOGG(id AudioID) Audio {
-	a, ok := l.oggs[id]
+	a, ok := l.audio[id]
 	if !ok {
 		oggInfo := l.getAudioInfo(id)
 		// Do not close this reader as it would break the stream with "file already closed".
@@ -179,13 +182,13 @@ func (l *Loader) LoadOGG(id AudioID) Audio {
 			panic(err.Error())
 		}
 		a = l.createAudioObject(player, id, oggInfo)
-		l.oggs[id] = a
+		l.audio[id] = a
 	}
 	return a
 }
 
 func (l *Loader) loadCustomAudio(id AudioID, info AudioInfo) (Audio, bool) {
-	a, ok := l.customAudio[id]
+	a, ok := l.audio[id]
 	if !ok {
 		if l.CustomAudioLoader == nil {
 			// Can't load a new custom audio resource without this function.
@@ -206,7 +209,7 @@ func (l *Loader) loadCustomAudio(id AudioID, info AudioInfo) (Audio, bool) {
 			panic(err.Error())
 		}
 		a = l.createAudioObject(player, id, info)
-		l.customAudio[id] = a
+		l.audio[id] = a
 	}
 	return a, true
 }
