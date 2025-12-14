@@ -158,6 +158,10 @@ func (l *Loader) LoadWAV(id AudioID) Audio {
 			}
 		}
 		a = l.createAudioObject(player, id, wavInfo)
+		{
+			const bytesPerFrame = 2 * 2 // 16-bit data and 2 channels
+			a.Duration = float64(stream.Length()) / float64(bytesPerFrame*l.audioContext.SampleRate())
+		}
 		l.audio[id] = a
 	}
 	return a

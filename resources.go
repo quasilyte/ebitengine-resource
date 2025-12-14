@@ -65,6 +65,10 @@ type Audio struct {
 
 	Group  uint
 	Volume float64
+
+	// For some formats (e.g. wav) this value will hold a duration in secods.
+	// If it's 0, then this value can not be trusted.
+	Duration float64
 }
 
 // FontID is a typed key for Font resources.
