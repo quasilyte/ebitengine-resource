@@ -13,6 +13,12 @@ type registry[IDType ~int, InfoType any] struct {
 	mapping map[IDType]InfoType
 }
 
+// Get returns an id-associated info object.
+// That info object will be identical to the one was provided by Assign/Set.
+func (r *registry[IDType, InfoType]) Get(id IDType) InfoType {
+	return r.mapping[id]
+}
+
 // Set binds the typed resource ID to its metadata.
 // After that, a respective Load can properly load the resource
 // by that ID if the metadata is valid (for instance, the resource path).
