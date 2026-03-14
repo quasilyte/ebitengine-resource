@@ -87,6 +87,21 @@ func NewLoader(audioContext *audio.Context) *Loader {
 	return l
 }
 
+// LoadCustomAudio is an alternative to the Loader.CustomAudioLoader field.
+// Read its docs to learn more about the f parameter.
+func (l *Loader) LoadCustomAudio(id AudioID, f func(r io.Reader, info AudioInfo) io.ReadSeeker) Audio {
+	{
+		a, ok := l.audio[id]
+		if ok {
+			return a
+		}
+	}
+
+	audioInfo := l.getAudioInfo(id)
+	a, _ := l.loadCustomAudio(id, audioInfo, f)
+	return a
+}
+
 // LoadAudio is a helper method that will use an appropriate
 // Load method depending on the filename extension.
 //
@@ -109,7 +124,7 @@ func (l *Loader) LoadAudio(id AudioID) Audio {
 		return l.LoadWAV(id)
 	}
 	if l.CustomAudioLoader != nil {
-		a, ok := l.loadCustomAudio(id, audioInfo)
+		a, ok := l.loadCustomAudio(id, audioInfo, l.CustomAudioLoader)
 		if ok {
 			return a
 		}
@@ -191,10 +206,10 @@ func (l *Loader) LoadOGG(id AudioID) Audio {
 	return a
 }
 
-func (l *Loader) loadCustomAudio(id AudioID, info AudioInfo) (Audio, bool) {
+func (l *Loader) loadCustomAudio(id AudioID, info AudioInfo, f func(r io.Reader, info AudioInfo) io.ReadSeeker) (Audio, bool) {
 	a, ok := l.audio[id]
 	if !ok {
-		if l.CustomAudioLoader == nil {
+		if f == nil {
 			// Can't load a new custom audio resource without this function.
 			return a, false
 		}
@@ -204,7 +219,7 @@ func (l *Loader) loadCustomAudio(id AudioID, info AudioInfo) (Audio, bool) {
 				panic(fmt.Sprintf("closing %q custom audio reader: %v", info.Path, err))
 			}
 		}()
-		stream := l.CustomAudioLoader(r, info)
+		stream := f(r, info)
 		if stream == nil {
 			return a, false
 		}
