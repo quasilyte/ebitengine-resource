@@ -4,16 +4,13 @@ import (
 	"fmt"
 	"image"
 	"io"
-	"math"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/vorbis"
 	"github.com/hajimehoshi/ebiten/v2/audio/wav"
-	"github.com/hajimehoshi/ebiten/v2/text"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/opentype"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 // Loader is used to load and cache game resources like images and audio files.
@@ -253,21 +250,13 @@ func (l *Loader) LoadFont(id FontID) Font {
 		if err != nil {
 			panic(fmt.Sprintf("reading %q data: %v", fontInfo.Path, err))
 		}
-		tt, err := opentype.Parse(fontData)
+		s, err := text.NewGoTextFaceSource(io.NopCloser(strings.NewReader(string(fontData))))
 		if err != nil {
 			panic(fmt.Sprintf("parsing %q font: %v", fontInfo.Path, err))
 		}
-		face, err := opentype.NewFace(tt, &opentype.FaceOptions{
-			Size:    float64(fontInfo.Size),
-			DPI:     96,
-			Hinting: font.HintingFull,
-		})
-		if err != nil {
-			panic(fmt.Sprintf("creating a font face for %q: %v", fontInfo.Path, err))
-		}
-		if fontInfo.LineSpacing != 0 && fontInfo.LineSpacing != 1 {
-			h := float64(face.Metrics().Height.Round()) * fontInfo.LineSpacing
-			face = text.FaceWithLineHeight(face, math.Round(h))
+		face := &text.GoTextFace{
+			Source: s,
+			Size:   fontInfo.Size,
 		}
 		f = Font{
 			ID:   id,
