@@ -5,7 +5,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
-	"golang.org/x/image/font"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
 // AudioID is a typed key for Audio resources.
@@ -79,16 +79,14 @@ type FontInfo struct {
 	// A path that will be used to read the resource data.
 	Path string
 
-	Size int
-
-	LineSpacing float64
+	Size float64
 }
 
 type Font struct {
 	// An ID that was associated with this resource.
 	ID FontID
 
-	Face font.Face
+	Face text.Face
 }
 
 // ImageID is a typed key for Image resources.
