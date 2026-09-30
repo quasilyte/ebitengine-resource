@@ -52,6 +52,15 @@ type Loader struct {
 	ShaderRegistry registry[ShaderID, ShaderInfo]
 	RawRegistry    registry[RawID, RawInfo]
 
+	// Decode hooks are executed when a resource that is not yet cached
+	// is requested for the first time. Before the resource is converted into
+	// a proper resource (e.g. image.Image into *ebiten.Image),
+	// but after a raw resource was decoded.
+	//
+	// When to use: if you wish to have an access to raw data,
+	// but would like to avoid double-decoding.
+	ImageDecodeHook func(path string, img image.Image)
+
 	audioContext *audio.Context
 
 	images  map[ImageID]Image
@@ -291,6 +300,9 @@ func (l *Loader) LoadImage(id ImageID) Image {
 		rawImage, _, err := image.Decode(r)
 		if err != nil {
 			panic(fmt.Sprintf("decode %q image: %v", imageInfo.Path, err))
+		}
+		if l.ImageDecodeHook != nil {
+			l.ImageDecodeHook(imageInfo.Path, rawImage)
 		}
 		data := ebiten.NewImageFromImage(rawImage)
 		img = Image{
